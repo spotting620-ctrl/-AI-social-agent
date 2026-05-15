@@ -49,8 +49,12 @@
 1. 打开 [云函数 SCF](https://console.cloud.tencent.com/scf) → **新建** → 运行环境 **Node.js 16+** → 空白函数。
 2. 将本仓库 **`cloud/tencent-scf-feishu-proxy/index.js`** 的全部代码粘贴到函数「代码」中（入口函数名与控制台默认一致，一般为 **`main`**；若控制台要求 `exports.main` 已满足）。
 3. **函数配置** → **环境变量**：新增 **`FEISHU_WEBHOOK`** = 上一步的 Webhook 完整 URL。
-4. 保存并部署后，为该函数添加 **HTTP 访问服务** 或绑定 **API 网关**，得到以 `https://` 开头的**触发 URL**（注意公网可访问）。
-5. 打开 **`index.html`** 中脚本，把 **`CN_SUBMIT_PROXY_URL`** 设为该触发 URL（保留末尾无多余空格）。
+4. 保存并部署后，为该函数开启 **「函数 URL」**（与「触发器」同级菜单，文档见[函数 URL 概述](https://cloud.tencent.com/document/product/583/96099)）：  
+   - 绑定到 **`$LATEST`**（或你已发布的版本）；  
+   - 鉴权选 **「开放 / 无需鉴权」**（问卷在浏览器里匿名 `POST`，需公网可调；注意勿泄露该 URL，避免被刷）。  
+   - 复制形如 `https://<app-id>-<url-id>.<region>.tencentscf.com` 的 **HTTPS 地址**，填到 `index.html` 的 **`CN_SUBMIT_PROXY_URL`**。  
+   **说明**：控制台若提示 **「不支持 API 触发」**，是因为旧版 **「API 网关触发器」** 已对新用户逐步下线，**不是你不能用 HTTP**。请改用 **函数 URL**，不要用已下线的 API 网关触发器创建向导。
+5. 打开 **`index.html`** 中脚本，把 **`CN_SUBMIT_PROXY_URL`** 设为该地址（保留末尾无多余空格），再上传 COS。
 
 ### 3. 直连飞书（仅调试）
 
@@ -62,7 +66,7 @@
 
 | 变量 | 作用 |
 |------|------|
-| **`CN_SUBMIT_PROXY_URL`** | 云函数 / API 网关 HTTPS 地址（**推荐**，国内访问） |
+| **`CN_SUBMIT_PROXY_URL`** | 云函数 **函数 URL** 的 HTTPS 地址（**推荐**；勿再用已下线的 API 网关触发器） |
 | **`FEISHU_WEBHOOK_URL`** | 可选，直连飞书（易跨域，仅调试用） |
 | **`FORMSPREE_ID`** | 可选，Formspree 备份（境外服务） |
 
