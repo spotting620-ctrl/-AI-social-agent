@@ -56,7 +56,8 @@
    - 绑定到 **`$LATEST`**（或你已发布的版本）；  
    - 鉴权选 **「开放 / 无需鉴权」**（问卷在浏览器里匿名 `POST`，需公网可调；注意勿泄露该 URL，避免被刷）。  
    - 复制形如 `https://<app-id>-<url-id>.<region>.tencentscf.com` 的 **HTTPS 地址**，填到 `index.html` 的 **`CN_SUBMIT_PROXY_URL`**。  
-   - 若开启 **CORS**：`Expose-Headers`（暴露响应头）**不要留空**，否则会报 `InvalidParameterValue.Cors` / `Invalid ExposeHeaders`。可填 **`*`**，或填 **`Content-Type`** 等至少一项；`Allow-Methods` 须包含 **POST** 与 **OPTIONS**。  
+   - 若开启 **CORS**：`Expose-Headers`（暴露响应头）**不要留空**，否则会报 `InvalidParameterValue.Cors` / `Invalid ExposeHeaders`。可填 **`*`**，或填 **`Content-Type`** 等至少一项；`Allow-Methods` 须包含 **POST** 与 **OPTIONS**。**`Allow-Headers` 建议填 `*`**（或至少包含 `Content-Type`）；若只允许 `Content-Type` 而浏览器预检带了 `Accept`，会导致问卷页「提交失败」、控制台测试却仍正常。  
+   - 若浏览器提交失败：确认 **COS 上的 `index.html` 已上传最新版**（含 `CN_SUBMIT_PROXY_URL`），并 **强制刷新**（Ctrl+F5 / 清缓存）后再试。  
    - 若浏览器提交后提示失败，用浏览器 F12 → **网络** 看对该 URL 的响应体是否含 **`handler not found`**：说明云函数 **执行方法（入口）** 与代码不一致。请打开 **函数配置** → **执行方法**，改为 **`index.main`**（表示运行 `index.js` 里的 `exports.main`），保存后**重新部署**再试。  
    - **控制台测试出现 `empty body`**：说明测试事件里没有请求体。请用 **「本地上传」/ 自定义测试事件」**，粘贴与函数 URL 一致的结构，例如：  
      `{"httpMethod":"POST","body":"{\"msg_type\":\"text\",\"content\":{\"text\":\"测试\"}}","headers":{"content-type":"application/json"}}`  

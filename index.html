@@ -401,10 +401,12 @@
     }
 
     async function postJson(url, bodyObj) {
+      // 勿加 Accept：部分函数 URL 的 CORS 若未列出 Accept，浏览器预检会失败；控制台测试不受此限制。
       const res = await fetch(url, {
         method: "POST",
+        mode: "cors",
+        cache: "no-store",
         headers: {
-          Accept: "application/json",
           "Content-Type": "application/json",
         },
         body: JSON.stringify(bodyObj),
@@ -443,13 +445,28 @@
             submitted = true;
           } else {
             const t = await res.text();
-            throw new Error(t.slice(0, 200));
+            let extra = t.slice(0, 400);
+            try {
+              const j = JSON.parse(t);
+              if (j.body) {
+                const inner = typeof j.body === "string" ? j.body : JSON.stringify(j.body);
+                extra = inner.slice(0, 400);
+              }
+            } catch {
+              /* keep raw */
+            }
+            throw new Error(extra);
           }
         } catch (err) {
+          const msg = err && err.message ? String(err.message) : String(err);
           let hint =
-            "提交失败：请检查云函数地址、环境变量 FEISHU_WEBHOOK 是否配置正确。";
-          if (err && err.message && err.message.length < 400)
-            hint += " 详情：" + err.message;
+            "提交失败：请检查云函数地址、环境变量 FEISHU_WEBHOOK / FEISHU_SIGN_SECRET 是否配置正确。";
+          if (/Failed to fetch|NetworkError|Load failed|fetch/i.test(msg)) {
+            hint =
+              "无法连上云函数（多为浏览器跨域或网络）：请在函数 URL 的 CORS 里将 Allow-Headers 设为 * 或加入 Content-Type；确认 COS 上的 index.html 已更新并强制刷新（Ctrl+F5）。";
+          } else if (msg.length < 500) {
+            hint += " 详情：" + msg;
+          }
           statusEl.textContent = hint;
           statusEl.classList.add("error");
         }
