@@ -55,6 +55,9 @@
    - 复制形如 `https://<app-id>-<url-id>.<region>.tencentscf.com` 的 **HTTPS 地址**，填到 `index.html` 的 **`CN_SUBMIT_PROXY_URL`**。  
    - 若开启 **CORS**：`Expose-Headers`（暴露响应头）**不要留空**，否则会报 `InvalidParameterValue.Cors` / `Invalid ExposeHeaders`。可填 **`*`**，或填 **`Content-Type`** 等至少一项；`Allow-Methods` 须包含 **POST** 与 **OPTIONS**。  
    - 若浏览器提交后提示失败，用浏览器 F12 → **网络** 看对该 URL 的响应体是否含 **`handler not found`**：说明云函数 **执行方法（入口）** 与代码不一致。请打开 **函数配置** → **执行方法**，改为 **`index.main`**（表示运行 `index.js` 里的 `exports.main`），保存后**重新部署**再试。  
+   - **控制台测试出现 `empty body`**：说明测试事件里没有请求体。请用 **「本地上传」/ 自定义测试事件」**，粘贴与函数 URL 一致的结构，例如：  
+     `{"httpMethod":"POST","body":"{\"msg_type\":\"text\",\"content\":{\"text\":\"测试\"}}","headers":{"content-type":"application/json"}}`  
+     （注意 `body` 必须是**字符串**，内部引号需转义；或只贴飞书体：`{"msg_type":"text","content":{"text":"测试"}}`，新版代理代码也支持。）  
    **说明**：控制台若提示 **「不支持 API 触发」**，是因为旧版 **「API 网关触发器」** 已对新用户逐步下线，**不是你不能用 HTTP**。请改用 **函数 URL**，不要用已下线的 API 网关触发器创建向导。
 5. 打开 **`index.html`** 中脚本，把 **`CN_SUBMIT_PROXY_URL`** 设为该地址（保留末尾无多余空格），再上传 COS。
 

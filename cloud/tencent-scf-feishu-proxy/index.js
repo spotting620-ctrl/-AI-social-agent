@@ -12,17 +12,44 @@
 const https = require("https");
 
 function parseEvent(event) {
-  let method = "POST";
-  let bodyRaw = "";
-  if (event.httpMethod) {
-    method = event.httpMethod;
-    bodyRaw = event.body || "";
-  } else if (event.requestContext && event.requestContext.http) {
-    method = event.requestContext.http.method || "POST";
-    bodyRaw = event.body || "";
+  let ev = event;
+  if (typeof ev === "string") {
+    try {
+      ev = JSON.parse(ev);
+    } catch {
+      return { method: "POST", bodyRaw: "" };
+    }
   }
-  if (event.isBase64Encoded && typeof bodyRaw === "string" && bodyRaw.length > 0) {
-    bodyRaw = Buffer.from(bodyRaw, "base64").toString("utf8");
+  if (!ev || typeof ev !== "object") {
+    return { method: "POST", bodyRaw: "" };
+  }
+
+  let method = "POST";
+  if (typeof ev.httpMethod === "string") method = ev.httpMethod;
+  else if (ev.requestContext && ev.requestContext.http && ev.requestContext.http.method)
+    method = ev.requestContext.http.method;
+
+  let bodyRaw = "";
+  if (ev.body !== undefined && ev.body !== null) {
+    if (typeof ev.body === "string") bodyRaw = ev.body;
+    else if (typeof ev.body === "object") bodyRaw = JSON.stringify(ev.body);
+  }
+  if (!bodyRaw && ev.Body !== undefined && ev.Body !== null) {
+    if (typeof ev.Body === "string") bodyRaw = ev.Body;
+    else if (typeof ev.Body === "object") bodyRaw = JSON.stringify(ev.Body);
+  }
+
+  // 控制台「自定义测试」若直接贴飞书消息 JSON（无外层 httpMethod/body）
+  if (!bodyRaw && ev.msg_type && ev.content) {
+    bodyRaw = JSON.stringify({ msg_type: ev.msg_type, content: ev.content });
+  }
+
+  if (ev.isBase64Encoded && typeof bodyRaw === "string" && bodyRaw.length > 0) {
+    try {
+      bodyRaw = Buffer.from(bodyRaw, "base64").toString("utf8");
+    } catch {
+      /* keep */
+    }
   }
   return { method, bodyRaw };
 }
