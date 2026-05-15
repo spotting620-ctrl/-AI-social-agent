@@ -84,6 +84,38 @@ function sendHttpsJson(urlString, jsonBody) {
   });
 }
 
+/** 飞书常返回 HTTP 200 + JSON，用 code / StatusCode 表示是否真正发进群里 */
+function feishuBizOk(httpStatus, responseBody) {
+  if (httpStatus < 200 || httpStatus >= 300) {
+    return { ok: false, detail: responseBody || "bad http" };
+  }
+  let j = null;
+  try {
+    j = JSON.parse(responseBody);
+  } catch {
+    return { ok: true };
+  }
+  if (typeof j.code === "number" && j.code !== 0) {
+    return {
+      ok: false,
+      detail: JSON.stringify({
+        code: j.code,
+        msg: j.msg || j.StatusMessage || "",
+      }),
+    };
+  }
+  if (typeof j.StatusCode === "number" && j.StatusCode !== 0) {
+    return {
+      ok: false,
+      detail: JSON.stringify({
+        StatusCode: j.StatusCode,
+        StatusMessage: j.StatusMessage || "",
+      }),
+    };
+  }
+  return { ok: true };
+}
+
 exports.main = async (event) => {
   const cors = {
     "Access-Control-Allow-Origin": "*",
@@ -130,19 +162,24 @@ exports.main = async (event) => {
 
   try {
     const r = await sendHttpsJson(hook, forwardBody);
-    if (r.statusCode < 200 || r.statusCode >= 300) {
+    const biz = feishuBizOk(r.statusCode, r.body);
+    if (!biz.ok) {
       return {
         isBase64Encoded: false,
         statusCode: 502,
         headers: cors,
-        body: JSON.stringify({ error: "feishu webhook error", detail: r.body.slice(0, 500) }),
+        body: JSON.stringify({
+          error: "feishu rejected",
+          detail: biz.detail,
+          raw: (r.body || "").slice(0, 800),
+        }),
       };
     }
     return {
       isBase64Encoded: false,
       statusCode: 200,
       headers: cors,
-      body: JSON.stringify({ ok: true }),
+      body: JSON.stringify({ ok: true, feishu: (r.body || "").slice(0, 300) }),
     };
   } catch (e) {
     return {
