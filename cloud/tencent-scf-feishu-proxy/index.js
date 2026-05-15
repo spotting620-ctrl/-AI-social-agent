@@ -3,12 +3,15 @@
  *
  * 环境变量（在函数「配置」里添加）：
  *   FEISHU_WEBHOOK  必填，例如 https://open.feishu.cn/open-apis/bot/v2/hook/xxxx
+ *   FEISHU_SIGN_SECRET  若机器人在飞书里开启了「签名校验」，必填：机器人详情里复制的签名密钥（不是 Webhook）。
+ *                       未开启签名校验时可不填。
  *
  * 入口必须与控制台「执行方法」一致：代码为 exports.main 时，执行方法填 index.main。
  * （旧版「API 网关触发器」已对新用户下线，若提示不支持 API 触发，请改用函数 URL。）
  */
 "use strict";
 
+const crypto = require("crypto");
 const https = require("https");
 
 function parseEvent(event) {
@@ -116,6 +119,19 @@ function feishuBizOk(httpStatus, responseBody) {
   return { ok: true };
 }
 
+/**
+ * 飞书自定义机器人「签名校验」算法（与官方文档一致）：
+ * stringToSign = timestamp + "\n" + secret ，以此作为 HmacSHA256 的 key，对空串做 HMAC，再 Base64。
+ * 时间戳为秒级，与当前时间相差不超过 1 小时。
+ */
+function feishuSign(secret, timestampSec) {
+  const stringToSign = `${timestampSec}\n${secret}`;
+  return crypto
+    .createHmac("sha256", Buffer.from(stringToSign, "utf8"))
+    .update(Buffer.alloc(0))
+    .digest("base64");
+}
+
 exports.main = async (event) => {
   const cors = {
     "Access-Control-Allow-Origin": "*",
@@ -161,7 +177,17 @@ exports.main = async (event) => {
   }
 
   try {
-    const r = await sendHttpsJson(hook, forwardBody);
+    const signSecret = (process.env.FEISHU_SIGN_SECRET || "").trim();
+    let outbound = forwardBody;
+    if (signSecret) {
+      const obj = JSON.parse(forwardBody);
+      const ts = Math.floor(Date.now() / 1000);
+      obj.timestamp = String(ts);
+      obj.sign = feishuSign(signSecret, ts);
+      outbound = JSON.stringify(obj);
+    }
+
+    const r = await sendHttpsJson(hook, outbound);
     const biz = feishuBizOk(r.statusCode, r.body);
     if (!biz.ok) {
       return {

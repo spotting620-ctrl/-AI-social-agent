@@ -48,7 +48,10 @@
 
 1. 打开 [云函数 SCF](https://console.cloud.tencent.com/scf) → **新建** → 运行环境 **Node.js 16+** → 空白函数。
 2. 将本仓库 **`cloud/tencent-scf-feishu-proxy/index.js`** 的全部代码粘贴到函数「代码」中（入口函数名与控制台默认一致，一般为 **`main`**；若控制台要求 `exports.main` 已满足）。
-3. **函数配置** → **环境变量**：新增 **`FEISHU_WEBHOOK`** = 上一步的 Webhook 完整 URL。
+3. **函数配置** → **环境变量**：  
+   - **`FEISHU_WEBHOOK`** = 飞书机器人的 Webhook 完整 URL（必填）。  
+   - **`FEISHU_SIGN_SECRET`** = 若机器人在飞书里开启了 **「签名校验」**，把机器人详情里复制的 **签名密钥** 填在这里（**不是** Webhook 链接）。未开启签名校验则**不要添加**该项。  
+   - 若出现 **`code: 19021`（sign match fail）**：要么正确配置 `FEISHU_SIGN_SECRET` 并重新部署，要么在飞书里 **关闭签名校验**（仅关键词时则保证文案含关键词）。
 4. 保存并部署后，为该函数开启 **「函数 URL」**（与「触发器」同级菜单，文档见[函数 URL 概述](https://cloud.tencent.com/document/product/583/96099)）：  
    - 绑定到 **`$LATEST`**（或你已发布的版本）；  
    - 鉴权选 **「开放 / 无需鉴权」**（问卷在浏览器里匿名 `POST`，需公网可调；注意勿泄露该 URL，避免被刷）。  
