@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>调查问卷</title>
+  <meta name="description" content="在线调查问卷" />
+  <meta name="color-scheme" content="light" />
+  <meta name="theme-color" content="#f5f5f7" />
+  <style>
+    :root {
+      --bg: #f5f5f7;
+      --surface: #ffffff;
+      --hairline: rgba(0, 0, 0, 0.08);
+      --border: #d2d2d7;
+      --text: #1d1d1f;
+      --muted: #6e6e73;
+      --accent: #0071e3;
+      --accent-hover: #0077ed;
+      --accent-pressed: #006edb;
+      --danger: #e30000;
+      --radius-card: 18px;
+      --radius-field: 12px;
+      --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+        "Segoe UI", "Helvetica Neue", Helvetica, Arial, "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      font-family: var(--font);
+      font-size: 17px;
+      line-height: 1.47059;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    .wrap {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: max(2.5rem, env(safe-area-inset-top)) 1.25rem max(3.5rem, env(safe-area-inset-bottom));
+    }
+
+    header {
+      margin-bottom: 2.5rem;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: clamp(2rem, 5.5vw, 2.75rem);
+      font-weight: 600;
+      letter-spacing: -0.022em;
+      line-height: 1.07143;
+      margin: 0 0 0.75rem;
+    }
+
+    header p {
+      margin: 0 auto;
+      max-width: 36em;
+      color: var(--muted);
+      font-size: 19px;
+      line-height: 1.42105;
+      font-weight: 400;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      padding: 2rem 1.5rem;
+    }
+
+    @media (min-width: 480px) {
+      .card { padding: 2.25rem 2rem; }
+    }
+
+    fieldset {
+      border: none;
+      margin: 0;
+      padding: 1.75rem 0 0;
+    }
+
+    fieldset:first-of-type { padding-top: 0; }
+
+    fieldset + fieldset {
+      border-top: 1px solid var(--hairline);
+    }
+
+    fieldset:last-of-type { padding-bottom: 0; }
+
+    legend {
+      font-weight: 600;
+      font-size: 17px;
+      letter-spacing: -0.022em;
+      line-height: 1.35294;
+      margin-bottom: 0.5rem;
+      display: block;
+      width: 100%;
+    }
+
+    .hint {
+      display: block;
+      font-weight: 400;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.42857;
+      margin-bottom: 0.5rem;
+    }
+
+    label.option {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.65rem;
+      padding: 0.5rem 0;
+      cursor: pointer;
+      color: var(--text);
+      font-size: 17px;
+      transition: color 0.15s ease;
+    }
+
+    label.option:hover { color: var(--muted); }
+
+    label.option input {
+      margin-top: 0.25rem;
+      width: 1.125rem;
+      height: 1.125rem;
+      accent-color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    textarea,
+    input[type="text"],
+    input[type="email"] {
+      width: 100%;
+      margin-top: 0.5rem;
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-field);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 17px;
+      line-height: 1.35294;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    textarea::placeholder,
+    input::placeholder { color: #86868b; }
+
+    textarea { min-height: 120px; resize: vertical; }
+
+    textarea:hover,
+    input:hover { border-color: #b0b0b5; }
+
+    textarea:focus,
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.2);
+    }
+
+    .req { color: var(--danger); font-weight: 600; }
+
+    button[type="submit"] {
+      width: 100%;
+      margin-top: 2rem;
+      padding: 0.75rem 1.5rem;
+      min-height: 3rem;
+      font-size: 17px;
+      font-weight: 500;
+      letter-spacing: -0.022em;
+      font-family: inherit;
+      border: none;
+      border-radius: 980px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+    }
+
+    button[type="submit"]:hover:not(:disabled) { background: var(--accent-hover); }
+
+    button[type="submit"]:active:not(:disabled) {
+      background: var(--accent-pressed);
+      transform: scale(0.99);
+    }
+
+    button[type="submit"]:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 1.25rem;
+      font-size: 14px;
+      line-height: 1.42857;
+      color: var(--muted);
+      min-height: 1.4em;
+      text-align: center;
+    }
+
+    .status.error { color: var(--danger); }
+
+    #thankyou {
+      display: none;
+      text-align: center;
+      padding: 2.5rem 1.25rem;
+    }
+
+    #thankyou.visible { display: block; }
+
+    #thankyou h2 {
+      margin: 0 0 0.5rem;
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      font-weight: 600;
+      letter-spacing: -0.022em;
+      line-height: 1.125;
+    }
+
+    #thankyou-msg { color: var(--text); margin: 0; font-size: 17px; }
+
+    #thankyou-detail {
+      margin-top: 0.75rem;
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.42857;
+    }
+
+    #thankyou-detail:empty {
+      display: none;
+      margin-top: 0;
+    }
+
+    #form-shell.hidden { display: none; }
+
+    .fallback-json {
+      display: none;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin-top: 1rem;
+      padding: 1rem;
+      background: var(--bg);
+      border-radius: var(--radius-field);
+      border: 1px solid var(--hairline);
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text);
+      max-height: 220px;
+      overflow: auto;
+    }
+
+    footer {
+      margin-top: 2.5rem;
+      text-align: center;
+      font-size: 12px;
+      line-height: 1.33337;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>社交 AI 相关调查</h1>
+      <p>本问卷约需 2–3 分钟。填写内容仅用于研究目的，请根据实际情况作答。</p>
+    </header>
+
+    <div id="form-shell" class="card">
+      <form id="survey" novalidate>
+        <fieldset>
+          <legend>1. 您是否使用过对话式 AI（如 ChatGPT、豆包等）？ <span class="req">*</span></legend>
+          <label class="option"><input type="radio" name="used_ai" value="经常" required /> 经常</label>
+          <label class="option"><input type="radio" name="used_ai" value="偶尔" /> 偶尔</label>
+          <label class="option"><input type="radio" name="used_ai" value="很少" /> 很少</label>
+          <label class="option"><input type="radio" name="used_ai" value="从未" /> 从未</label>
+        </fieldset>
+
+        <fieldset>
+          <legend>2. 您对「能代表你与他人互动的 AI 代理」有多大兴趣？ <span class="req">*</span></legend>
+          <span class="hint">1 = 完全不感兴趣，5 = 非常感兴趣</span>
+          <label class="option"><input type="radio" name="interest" value="1" required /> 1</label>
+          <label class="option"><input type="radio" name="interest" value="2" /> 2</label>
+          <label class="option"><input type="radio" name="interest" value="3" /> 3</label>
+          <label class="option"><input type="radio" name="interest" value="4" /> 4</label>
+          <label class="option"><input type="radio" name="interest" value="5" /> 5</label>
+        </fieldset>
+
+        <fieldset>
+          <legend>3. 您最担心的方面是？（可多选）</legend>
+          <label class="option"><input type="checkbox" name="concern" value="隐私与安全" /> 隐私与安全</label>
+          <label class="option"><input type="checkbox" name="concern" value="信息准确性" /> 信息准确性</label>
+          <label class="option"><input type="checkbox" name="concern" value="人际边界" /> 人际边界</label>
+          <label class="option"><input type="checkbox" name="concern" value="责任归属" /> 责任归属</label>
+          <label class="option"><input type="checkbox" name="concern" value="暂无明显担忧" /> 暂无明显担忧</label>
+        </fieldset>
+
+        <fieldset>
+          <legend for="email">4. 邮箱（选填，便于后续回访）</legend>
+          <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email" />
+        </fieldset>
+
+        <fieldset>
+          <legend for="comments">5. 其他意见或想法（选填）</legend>
+          <textarea id="comments" name="comments" placeholder="欢迎补充任何想说的内容…"></textarea>
+        </fieldset>
+
+        <button type="submit" id="submit-btn">提交问卷</button>
+        <pre id="fallback-json" class="fallback-json" aria-label="问卷答案 JSON"></pre>
+      </form>
+    </div>
+
+    <p class="status" id="status" aria-live="polite"></p>
+
+    <div id="thankyou" class="card" role="status">
+      <h2>感谢参与</h2>
+      <p id="thankyou-msg">您的回复已提交。本窗口可以关闭。</p>
+      <p id="thankyou-detail"></p>
+    </div>
+
+    <footer>调查问卷 · 仅供研究使用</footer>
+  </div>
+
+  <script>
+    /**
+     * 在线收集回复（可选）：
+     * 1. 打开 https://formspree.io 注册并新建表单，复制表单 ID（形如 xxxxx）。
+     * 2. 将下方 FORMSPREE_ID 改为你的 ID，例如 "mqabcdeqr"。
+     * 3. 重新上传/发布网页后，提交结果会发到你的邮箱。
+     * 若留空，提交时会尝试将答案复制到剪贴板（需浏览器允许）。
+     */
+    const FORMSPREE_ID = "";
+
+    const form = document.getElementById("survey");
+    const statusEl = document.getElementById("status");
+    const submitBtn = document.getElementById("submit-btn");
+    const formShell = document.getElementById("form-shell");
+    const thankyou = document.getElementById("thankyou");
+
+    function gatherPayload() {
+      const fd = new FormData(form);
+      const concern = fd.getAll("concern");
+      return {
+        used_ai: fd.get("used_ai") || "",
+        interest: fd.get("interest") || "",
+        concern: concern.length ? concern.join("；") : "",
+        email: (fd.get("email") || "").toString().trim(),
+        comments: (fd.get("comments") || "").toString().trim(),
+        submitted_at: new Date().toISOString(),
+      };
+    }
+
+    const thankyouMsg = document.getElementById("thankyou-msg");
+    const thankyouDetail = document.getElementById("thankyou-detail");
+    const fallbackJson = document.getElementById("fallback-json");
+
+    function showThankYou(detail) {
+      if (FORMSPREE_ID) {
+        thankyouMsg.textContent = "您的回复已提交。本窗口可以关闭。";
+        thankyouDetail.textContent = detail || "";
+      } else {
+        thankyouMsg.textContent = "感谢填写。";
+        thankyouDetail.textContent =
+          detail || "请将答案发送给问卷组织者后关闭本页。";
+      }
+      formShell.classList.add("hidden");
+      thankyou.classList.add("visible");
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      statusEl.textContent = "";
+      statusEl.classList.remove("error");
+      fallbackJson.textContent = "";
+      fallbackJson.style.display = "none";
+
+      if (!form.reportValidity()) {
+        statusEl.textContent = "请完成所有必填项。";
+        statusEl.classList.add("error");
+        return;
+      }
+
+      const payload = gatherPayload();
+      const body = new URLSearchParams();
+      Object.entries(payload).forEach(([k, v]) => body.append(k, v));
+
+      submitBtn.disabled = true;
+      statusEl.textContent = "正在提交…";
+
+      if (FORMSPREE_ID) {
+        try {
+          const res = await fetch("https://formspree.io/f/" + FORMSPREE_ID, {
+            method: "POST",
+            body,
+            headers: { Accept: "application/json" },
+          });
+          if (!res.ok) throw new Error("提交失败");
+          showThankYou();
+        } catch {
+          statusEl.textContent = "提交失败，请检查网络或 Formspree 配置后重试。";
+          statusEl.classList.add("error");
+        } finally {
+          submitBtn.disabled = false;
+        }
+        return;
+      }
+
+      const text = JSON.stringify(payload, null, 2);
+      try {
+        await navigator.clipboard.writeText(text);
+        statusEl.textContent = "";
+        showThankYou("已将答案复制到剪贴板，请粘贴到邮件或文档中发给组织者。");
+      } catch {
+        statusEl.textContent = "无法写入剪贴板，请手动复制下方 JSON。";
+        statusEl.classList.add("error");
+        fallbackJson.textContent = text;
+        fallbackJson.style.display = "block";
+        submitBtn.disabled = false;
+        return;
+      }
+      submitBtn.disabled = false;
+    });
+  </script>
+</body>
+</html>
