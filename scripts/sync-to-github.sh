@@ -6,7 +6,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-git add index.html README.md 2>/dev/null || true
+git add index.html README.md cloud 2>/dev/null || true
 git add -u
 
 if git diff --staged --quiet; then

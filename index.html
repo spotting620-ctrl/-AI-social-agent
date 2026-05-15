@@ -330,11 +330,19 @@
 
   <script>
     /**
-     * 正式发放问卷前请务必填写 Formspree 表单 ID，否则无法自动上送数据。
-     * 1. 打开 https://formspree.io 注册 → New Form → 复制表单路径里的 ID（如 mqabcdeqr）。
-     * 2. 将下方 FORMSPREE_ID 改为你的 ID，保存后 push 到 GitHub。
-     * 3. 提交结果会发到你在 Formspree 绑定的邮箱，可在后台导出。
-     * 留空时仅作本地演示：会尝试把 JSON 复制到剪贴板（不适合给受访者用）。
+     * 国内推荐：腾讯云函数代理 → 飞书群机器人（见 README「腾讯云 COS + 飞书」）。
+     * 把「函数 URL / API 网关」填到 CN_SUBMIT_PROXY_URL；飞书 Webhook 只写在云函数环境变量里，前端不暴露。
+     */
+    const CN_SUBMIT_PROXY_URL = "";
+
+    /**
+     * 可选：浏览器直连飞书机器人 Webhook。部分网络/浏览器会因跨域失败，失败时请改用上面的云函数代理。
+     * 形如 https://open.feishu.cn/open-apis/bot/v2/hook/xxxxxxxx
+     */
+    const FEISHU_WEBHOOK_URL = "";
+
+    /**
+     * 备选：Formspree（境外服务）。国内被试可能偶发提交失败，可与飞书并存作备份。
      */
     const FORMSPREE_ID = "";
 
@@ -362,16 +370,46 @@
     const fallbackJson = document.getElementById("fallback-json");
 
     function showThankYou(detail) {
-      if (FORMSPREE_ID) {
-        thankyouMsg.textContent = "您的回复已提交。本窗口可以关闭。";
-        thankyouDetail.textContent = detail || "";
-      } else {
-        thankyouMsg.textContent = "感谢填写。";
-        thankyouDetail.textContent =
-          detail || "请将答案发送给问卷组织者后关闭本页。";
-      }
+      const hasService = !!(
+        CN_SUBMIT_PROXY_URL ||
+        FEISHU_WEBHOOK_URL ||
+        FORMSPREE_ID
+      );
+      thankyouMsg.textContent = hasService
+        ? "您的回复已提交。本窗口可以关闭。"
+        : "感谢填写。";
+      thankyouDetail.textContent =
+        detail ||
+        (hasService ? "" : "请将答案发送给问卷组织者后关闭本页。");
       formShell.classList.add("hidden");
       thankyou.classList.add("visible");
+    }
+
+    function buildFeishuMessage(payload) {
+      const lines = [
+        "【问卷提交】",
+        "提交时间：" + (payload.submitted_at || ""),
+        "1. 使用对话式 AI：" + (payload.used_ai || ""),
+        "2. 兴趣 1-5：" + (payload.interest || ""),
+        "3. 担心方面：" + (payload.concern || "（未选）"),
+        "4. 邮箱：" + (payload.email || "（未填）"),
+        "5. 其他意见：" + (payload.comments || "（未填）"),
+      ];
+      let text = lines.join("\n");
+      if (text.length > 3500) text = text.slice(0, 3500) + "\n…(内容已截断)";
+      return { msg_type: "text", content: { text } };
+    }
+
+    async function postJson(url, bodyObj) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(bodyObj),
+      });
+      return res;
     }
 
     form.addEventListener("submit", async (e) => {
@@ -388,11 +426,51 @@
       }
 
       const payload = gatherPayload();
+      const feishuBody = buildFeishuMessage(payload);
 
       submitBtn.disabled = true;
       statusEl.textContent = "正在提交…";
 
-      if (FORMSPREE_ID) {
+      let submitted = false;
+
+      if (CN_SUBMIT_PROXY_URL) {
+        try {
+          const res = await postJson(CN_SUBMIT_PROXY_URL, feishuBody);
+          if (res.ok) {
+            statusEl.textContent = "";
+            statusEl.classList.remove("error");
+            showThankYou("数据已通过国内服务送达飞书。");
+            submitted = true;
+          } else {
+            const t = await res.text();
+            throw new Error(t.slice(0, 200));
+          }
+        } catch {
+          statusEl.textContent =
+            "提交失败：请检查云函数地址、环境变量 FEISHU_WEBHOOK 是否配置正确。";
+          statusEl.classList.add("error");
+        }
+      }
+
+      if (!submitted && FEISHU_WEBHOOK_URL) {
+        try {
+          const res = await postJson(FEISHU_WEBHOOK_URL, feishuBody);
+          if (res.ok) {
+            statusEl.textContent = "";
+            statusEl.classList.remove("error");
+            showThankYou("数据已发送到飞书群机器人。");
+            submitted = true;
+          } else {
+            throw new Error("feishu http " + res.status);
+          }
+        } catch {
+          statusEl.textContent =
+            "直连飞书失败（常见于浏览器跨域）。请改用云函数代理 CN_SUBMIT_PROXY_URL，详见 README。";
+          statusEl.classList.add("error");
+        }
+      }
+
+      if (!submitted && FORMSPREE_ID) {
         const email = payload.email;
         const jsonBody = {
           ...payload,
@@ -400,47 +478,52 @@
           ...(email ? { _replyto: email } : {}),
         };
         try {
-          const res = await fetch("https://formspree.io/f/" + FORMSPREE_ID, {
-            method: "POST",
-            headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(jsonBody),
-          });
+          const res = await postJson(
+            "https://formspree.io/f/" + FORMSPREE_ID,
+            jsonBody
+          );
           let errMsg = "";
           try {
             const data = await res.json();
             if (!res.ok && data && (data.error || data.errors))
-              errMsg = typeof data.error === "string" ? data.error : JSON.stringify(data.errors);
+              errMsg =
+                typeof data.error === "string"
+                  ? data.error
+                  : JSON.stringify(data.errors);
           } catch {
-            /* ignore parse */
+            /* ignore */
           }
           if (!res.ok) throw new Error(errMsg || "提交失败");
-          showThankYou("数据已上传，我们会通过邮件收到您的回复。");
+          statusEl.textContent = "";
+          statusEl.classList.remove("error");
+          showThankYou("数据已上传到 Formspree（邮件/后台）。");
+          submitted = true;
         } catch {
           statusEl.textContent =
-            "提交失败，请检查网络、Formspree 表单 ID 是否正确，或稍后再试。";
+            "Formspree 提交失败，请检查网络或表单 ID；建议国内被试优先使用飞书通道。";
           statusEl.classList.add("error");
-        } finally {
-          submitBtn.disabled = false;
         }
-        return;
       }
 
-      const text = JSON.stringify(payload, null, 2);
-      try {
-        await navigator.clipboard.writeText(text);
-        statusEl.textContent = "";
-        showThankYou("已将答案复制到剪贴板，请粘贴到邮件或文档中发给组织者。");
-      } catch {
-        statusEl.textContent = "无法写入剪贴板，请手动复制下方 JSON。";
-        statusEl.classList.add("error");
-        fallbackJson.textContent = text;
-        fallbackJson.style.display = "block";
+      if (!submitted && (CN_SUBMIT_PROXY_URL || FEISHU_WEBHOOK_URL || FORMSPREE_ID)) {
         submitBtn.disabled = false;
         return;
       }
+
+      if (!submitted) {
+        const text = JSON.stringify(payload, null, 2);
+        try {
+          await navigator.clipboard.writeText(text);
+          statusEl.textContent = "";
+          showThankYou("已将答案复制到剪贴板，请粘贴到邮件或文档中发给组织者。");
+        } catch {
+          statusEl.textContent = "无法写入剪贴板，请手动复制下方 JSON。";
+          statusEl.classList.add("error");
+          fallbackJson.textContent = text;
+          fallbackJson.style.display = "block";
+        }
+      }
+
       submitBtn.disabled = false;
     });
   </script>
