@@ -1,0 +1,8 @@
+#!/bin/sh
+# 在每次「本地提交成功」后，自动推送到 origin 当前分支。
+# 安装：在项目根目录执行 ./scripts/install-git-hook.sh
+
+branch=$(git branch --show-current 2>/dev/null) || exit 0
+[ -n "$branch" ] || exit 0
+
+git push -u origin "$branch"
