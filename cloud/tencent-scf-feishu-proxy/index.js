@@ -4,7 +4,7 @@
  * 环境变量（在函数「配置」里添加）：
  *   FEISHU_WEBHOOK  必填，例如 https://open.feishu.cn/open-apis/bot/v2/hook/xxxx
  *
- * 创建函数后，在控制台开启「函数 URL」，把 HTTPS 地址填进 index.html 的 CN_SUBMIT_PROXY_URL。
+ * 入口必须与控制台「执行方法」一致：代码为 exports.main 时，执行方法填 index.main。
  * （旧版「API 网关触发器」已对新用户下线，若提示不支持 API 触发，请改用函数 URL。）
  */
 "use strict";
