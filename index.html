@@ -330,11 +330,11 @@
 
   <script>
     /**
-     * 在线收集回复（可选）：
-     * 1. 打开 https://formspree.io 注册并新建表单，复制表单 ID（形如 xxxxx）。
-     * 2. 将下方 FORMSPREE_ID 改为你的 ID，例如 "mqabcdeqr"。
-     * 3. 重新上传/发布网页后，提交结果会发到你的邮箱。
-     * 若留空，提交时会尝试将答案复制到剪贴板（需浏览器允许）。
+     * 正式发放问卷前请务必填写 Formspree 表单 ID，否则无法自动上送数据。
+     * 1. 打开 https://formspree.io 注册 → New Form → 复制表单路径里的 ID（如 mqabcdeqr）。
+     * 2. 将下方 FORMSPREE_ID 改为你的 ID，保存后 push 到 GitHub。
+     * 3. 提交结果会发到你在 Formspree 绑定的邮箱，可在后台导出。
+     * 留空时仅作本地演示：会尝试把 JSON 复制到剪贴板（不适合给受访者用）。
      */
     const FORMSPREE_ID = "";
 
@@ -388,23 +388,39 @@
       }
 
       const payload = gatherPayload();
-      const body = new URLSearchParams();
-      Object.entries(payload).forEach(([k, v]) => body.append(k, v));
 
       submitBtn.disabled = true;
       statusEl.textContent = "正在提交…";
 
       if (FORMSPREE_ID) {
+        const email = payload.email;
+        const jsonBody = {
+          ...payload,
+          _subject: "[问卷] 新回复 " + (payload.submitted_at || "").slice(0, 19),
+          ...(email ? { _replyto: email } : {}),
+        };
         try {
           const res = await fetch("https://formspree.io/f/" + FORMSPREE_ID, {
             method: "POST",
-            body,
-            headers: { Accept: "application/json" },
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(jsonBody),
           });
-          if (!res.ok) throw new Error("提交失败");
-          showThankYou();
+          let errMsg = "";
+          try {
+            const data = await res.json();
+            if (!res.ok && data && (data.error || data.errors))
+              errMsg = typeof data.error === "string" ? data.error : JSON.stringify(data.errors);
+          } catch {
+            /* ignore parse */
+          }
+          if (!res.ok) throw new Error(errMsg || "提交失败");
+          showThankYou("数据已上传，我们会通过邮件收到您的回复。");
         } catch {
-          statusEl.textContent = "提交失败，请检查网络或 Formspree 配置后重试。";
+          statusEl.textContent =
+            "提交失败，请检查网络、Formspree 表单 ID 是否正确，或稍后再试。";
           statusEl.classList.add("error");
         } finally {
           submitBtn.disabled = false;
