@@ -53,6 +53,7 @@
    - 绑定到 **`$LATEST`**（或你已发布的版本）；  
    - 鉴权选 **「开放 / 无需鉴权」**（问卷在浏览器里匿名 `POST`，需公网可调；注意勿泄露该 URL，避免被刷）。  
    - 复制形如 `https://<app-id>-<url-id>.<region>.tencentscf.com` 的 **HTTPS 地址**，填到 `index.html` 的 **`CN_SUBMIT_PROXY_URL`**。  
+   - 若开启 **CORS**：`Expose-Headers`（暴露响应头）**不要留空**，否则会报 `InvalidParameterValue.Cors` / `Invalid ExposeHeaders`。可填 **`*`**，或填 **`Content-Type`** 等至少一项；`Allow-Methods` 须包含 **POST** 与 **OPTIONS**。  
    **说明**：控制台若提示 **「不支持 API 触发」**，是因为旧版 **「API 网关触发器」** 已对新用户逐步下线，**不是你不能用 HTTP**。请改用 **函数 URL**，不要用已下线的 API 网关触发器创建向导。
 5. 打开 **`index.html`** 中脚本，把 **`CN_SUBMIT_PROXY_URL`** 设为该地址（保留末尾无多余空格），再上传 COS。
 
